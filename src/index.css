@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Georgia", "Palatino", "STSong", "Songti SC", "SimSun", serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Fira Code", "JetBrains Mono", monospace;
+  
+  --animate-spin-slow: spin 20s linear infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Aged Parchment Paper Background */
+.parchment-paper {
+  background-color: #f6efe2;
+  background-image: radial-gradient(#ffffff 20%, transparent 20%),
+                    radial-gradient(#fbf8f0 20%, transparent 20%);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+  box-shadow: inset 0 0 40px rgba(139, 92, 26, 0.15);
+}
+
+/* Custom Scrollbar for Drawer */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 5px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.2);
+  border-radius: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.4);
+}
+

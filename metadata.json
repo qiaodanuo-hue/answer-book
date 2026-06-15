@@ -1,0 +1,6 @@
+{
+  "name": "答案之书",
+  "description": "神秘的《答案之书》，专为为你解答生活、情感、事业中的每一个迷惘与抉择。静心闭目，诚心冥想你的问题，翻开书页，收获你专属的命运启示。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
