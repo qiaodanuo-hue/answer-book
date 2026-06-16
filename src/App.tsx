@@ -839,11 +839,11 @@ export default function App() {
     }
 
     // Force clear/reset to 0 used today for current design iteration session
-    const resetDone = localStorage.getItem('answers_book_reset_to_3_v2');
+    const resetDone = localStorage.getItem('answers_book_reset_to_3_v4');
     if (!resetDone) {
       localStorage.setItem('answers_book_daily_used', '0');
       localStorage.setItem('answers_book_daily_bonus', '0');
-      localStorage.setItem('answers_book_reset_to_3_v2', 'true');
+      localStorage.setItem('answers_book_reset_to_3_v4', 'true');
     }
 
     // Daily limit initialization configuration
@@ -2072,14 +2072,18 @@ export default function App() {
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 {attemptsLeft <= 0 ? (
                   bonusReadings < 2 ? (
-                    <span className="text-center whitespace-nowrap">今日天机已竭，可在下方「分享命运神签」以重获卜问福缘 (今日已赠: +{bonusReadings}/2次)</span>
+                    <span className="text-center whitespace-nowrap">今日天机已竭，「分享命运神签」重获卜问福缘 (今日已赠: +{bonusReadings}/2次)</span>
                   ) : (
                     <span className="text-amber-300/90 font-medium text-center whitespace-nowrap">今日问卜已达上限，天机暂避。收藏本页链接，明天准时续缘~</span>
                   )
                 ) : (
-                  <span>
-                    今日已占问 {usedToday} 次，天机余量: <span className="font-sans font-semibold text-amber-300">{attemptsLeft}</span> / {BASELINE_LIMIT + bonusReadings} 次
-                    {bonusReadings > 0 && <span className="text-emerald-400 ml-1 font-sans font-medium">(含结缘赠礼 +{bonusReadings} 次)</span>}
+                  <span className="whitespace-nowrap">
+                    今日占问 {usedToday} 次，天机余量 <span className="font-sans font-semibold text-amber-300">{attemptsLeft}</span>/{BASELINE_LIMIT + bonusReadings} 次
+                    {bonusReadings < 2 ? (
+                      <span className="text-amber-400/90 ml-1.5 font-sans font-normal">(分享本页可增次数)</span>
+                    ) : (
+                      <span className="text-emerald-400 ml-1 font-sans font-medium">(已获赠福缘)</span>
+                    )}
                   </span>
                 )}
               </motion.div>
