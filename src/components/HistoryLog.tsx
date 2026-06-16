@@ -18,6 +18,7 @@ export interface HistoryRecord {
   luckyColor: string;
   luckyNumber: string;
   hexagram?: string;
+  attunementId?: string;
 }
 
 interface HistoryLogProps {

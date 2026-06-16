@@ -28,6 +28,7 @@ import { ANSWERS, CATEGORIES, CategoryId, Answer } from './data';
 import { synth } from './audio';
 import ParticleBackground from './components/ParticleBackground';
 import HistoryLog, { HistoryRecord } from './components/HistoryLog';
+import html2canvas from 'html2canvas';
 
 // Helper to map traditional Chinese color names of the Answer Book to beautiful CSS Hex colors
 export function getLuckyColorHex(color: string): string {
@@ -186,6 +187,556 @@ export function getLuckyColorHex(color: string): string {
   return `hsl(${h}, 70%, 55%)`;
 }
 
+export interface Attunement {
+  id: string;
+  title: string;
+  english: string;
+  intro: string;
+  term1: { title: string; desc: string };
+  term2: { title: string; desc: string };
+}
+
+export const ALL_ATTUNEMENTS: Attunement[] = [
+  {
+    id: 'cosmic-alignment',
+    title: '大德归本位 · 宿命归天枢',
+    english: 'COSMIC ALIGNMENT',
+    intro: '此印是命运之书的守护宣告与祝福',
+    term1: {
+      title: '大德归本位',
+      desc: '回归本心。喻示历经迷茫洗礼后，终将找回最初的善良、力量与坦荡本位。'
+    },
+    term2: {
+      title: '宿命归天枢',
+      desc: '极星指路。意指当下的际遇皆有因果，极星高照，困局终将云开雾散。'
+    }
+  },
+  {
+    id: 'transient-balance',
+    title: '万物皆过往 · 明月照大江',
+    english: 'TRANSIENT BALANCE',
+    intro: '此印是顺应自然、泰然自若的智慧',
+    term1: {
+      title: '万物皆过往',
+      desc: '坦然释怀。世间纷纷扰扰，皆为沿途风景，不为执念所困，心境自得宽广。'
+    },
+    term2: {
+      title: '明月照大江',
+      desc: '静水深流。任凭波涛汹涌，内心依然如明月江水，澄澈温润，不畏浮尘喧嚣。'
+    }
+  },
+  {
+    id: 'spiritual-mirror',
+    title: '心如明镜台 · 菩提本无树',
+    english: 'SPIRITUAL MIRROR',
+    intro: '此印是澄明绝虑、直见本源的关照',
+    term1: {
+      title: '心如明镜台',
+      desc: '反求诸己。时时拂拭内心的尘埃，不被外界虚妄的声音裹挟，保持极佳清醒。'
+    },
+    term2: {
+      title: '菩提本无树',
+      desc: '本无挂碍。本来无一物，何处惹尘埃。看轻当下执迷，回归最轻盈的自我。'
+    }
+  },
+  {
+    id: 'grand-mastery',
+    title: '星汉回日月 · 乾坤入袖中',
+    english: 'GRAND MASTERY',
+    intro: '此印是乾坤在握、潜能觉醒的昭示',
+    term1: {
+      title: '星汉回日月',
+      desc: '顺应星移。寓意事物发展的客观规律正在朝向对您有利的轨道偏转运行。'
+    },
+    term2: {
+      title: '乾坤入袖中',
+      desc: '胸怀格局。代表您内心深处拥有吞吐万物的智慧，只需静心统筹即可破局。'
+    }
+  },
+  {
+    id: 'resilient-ascent',
+    title: '逆水行扁舟 · 独步万重浪',
+    english: 'RESILIENT ASCENT',
+    intro: '此印是磨砺锋芒、砥砺前行的守护',
+    term1: {
+      title: '逆水行扁舟',
+      desc: '蓄力克难。哪怕当下的境遇略显逆风孤意，亦是在磨炼心智，积攒蓄能。'
+    },
+    term2: {
+      title: '独步万重浪',
+      desc: '披荆斩棘。预示您终将凭借顽强的意志，在风浪交加的历练中蜕变，立于浪头。'
+    }
+  },
+  {
+    id: 'zen-peace',
+    title: '返景入深林 · 复照青苔上',
+    english: 'ZEN PEACEFULNESS',
+    intro: '此印是闹中取静、机缘复苏的微光',
+    term1: {
+      title: '返景入深林',
+      desc: '避喧返真。退一步海阔天空，在安静中沉淀心智，避开无谓的纷争与消耗。'
+    },
+    term2: {
+      title: '复照青苔上',
+      desc: '生机重现。微弱却笃定的光暖重回生命死角，看似枯竭的心田正悄然复苏。'
+    }
+  },
+  {
+    id: 'love-eternal',
+    title: '两情若长久 · 朝暮无挂碍',
+    english: 'LOVE ETERNAL',
+    intro: '此印是超越时空壁垒的契合与笃定',
+    term1: {
+      title: '两情若长久',
+      desc: '心灵契合。灵魂深处的认可不因空间或时间的阻隔而有损，笃定而宁静。'
+    },
+    term2: {
+      title: '朝暮无挂碍',
+      desc: '自由舒适。不再执着于时刻的纠葛与博弈，给爱多一分坦然与辽阔空间。'
+    }
+  },
+  {
+    id: 'love-spring',
+    title: '春水映桃花 · 柔情付东流',
+    english: 'SPRING DEVOTION',
+    intro: '此印是情感释怀、温柔相待的流转',
+    term1: {
+      title: '春水映桃花',
+      desc: '万象复苏。红尘风月里，您的情感正跨越冰封，迎来全新的温柔春意。'
+    },
+    term2: {
+      title: '柔情付东流',
+      desc: '泰然随心。随缘而行，不为过往的遗憾和执念捆绑，让爱像溪流般自在。'
+    }
+  },
+  {
+    id: 'love-letgo',
+    title: '相濡以沫处 · 江湖相忘时',
+    english: 'COMPASSIONATE RELEASE',
+    intro: '此印是红尘离合、洒脱豁达的智慧',
+    term1: {
+      title: '相濡以沫处',
+      desc: '感恩际遇。感谢曾有过的温度与同行，每段关系都是塑造自我的不世镜鉴。'
+    },
+    term2: {
+      title: '江湖相忘时',
+      desc: '释怀前行。有时松手亦是成全，释怀既是给彼此最深切、最高雅的祝福。'
+    }
+  },
+  {
+    id: 'love-resonance',
+    title: '同声自相应 · 同气自相求',
+    english: 'SPIRITUAL RESONANCE',
+    intro: '此印代表磁场相吸、灵犀相通的感应',
+    term1: {
+      title: '同声自相应',
+      desc: '频率一致。您期待的声音正在获得回响，真挚的渴望终会等来温存的回音。'
+    },
+    term2: {
+      title: '同气自相求',
+      desc: '灵魂物语。频率相同的人会自动跨越繁密的人群相遇，不需刻意伪装或迎合。'
+    }
+  },
+  {
+    id: 'love-reunion',
+    title: '月缺终有圆 · 浮云散清风',
+    english: 'EXPECTED FULFILLMENT',
+    intro: '此印是守得云开、情感复苏的祥兆',
+    term1: {
+      title: '月缺终有圆',
+      desc: '循环有度。感情里的起伏与分别都是圆满前的历练，无须过分惶恐。'
+    },
+    term2: {
+      title: '浮云散清风',
+      desc: '误会消融。多一点体贴与释怀，横亘在两心之间的隔阂终将冰破雪消。'
+    }
+  },
+  {
+    id: 'career-gold',
+    title: '千淘万漉随 · 吹尽狂沙金',
+    english: 'GOLDEN PERSISTENCE',
+    intro: '此印代表百炼成钢、才干尽显的锤炼',
+    term1: {
+      title: '千淘万漉随',
+      desc: '承压笃行。在工作的重重阻力与琐碎事务中，您在默默夯实不可动摇的底盘。'
+    },
+    term2: {
+      title: '吹尽狂沙金',
+      desc: '真金耀眼。外界浮夸的杂音退去时，您积攒的实力自然会让您脱颖而出。'
+    }
+  },
+  {
+    id: 'career-soar',
+    title: '扶摇九万里 · 乘风破重云',
+    english: 'SOARING HEIGHTS',
+    intro: '此印是潜能爆发、直上青云的飞跃',
+    term1: {
+      title: '扶摇九万里',
+      desc: '长风得势。厚积薄发的势能已经拉满，当前的平台或机会非常利于您展示才干。'
+    },
+    term2: {
+      title: '乘风破重云',
+      desc: '一往无前。凭借极高的胆识去突破繁杂规则与阻碍，将乾坤踏实纳入袖中。'
+    }
+  },
+  {
+    id: 'career-jade',
+    title: '石中藏美玉 · 璞面待刀工',
+    english: 'HIDDEN TREASURE',
+    intro: '此印是藏器于身、砥砺精进的修炼',
+    term1: {
+      title: '石中藏美玉',
+      desc: '慧眼独具。当前的您具有极高的内在价值和潜能，只是表层的灰烟还未彻底拂去。'
+    },
+    term2: {
+      title: '璞面待刀工',
+      desc: '匠心沉淀。沉下心去经历严苛的项目磨练。雕琢完成后，光芒必将加倍暴涨。'
+    }
+  },
+  {
+    id: 'career-solitary',
+    title: '独木成茂林 · 孤臣立狂澜',
+    english: 'SOLITARY PILLAR',
+    intro: '此印代表孤勇当担、砥柱中流的坚守',
+    term1: {
+      title: '独木成茂林',
+      desc: '独当一面。即便无人支持或孤掌难鸣，您内心的气场也足以支撑起一整座大盘。'
+    },
+    term2: {
+      title: '孤臣立狂澜',
+      desc: '中流胜局。顶住眼前的困难与惊涛骇浪。只要您不言弃，您就是不可替代的屏障。'
+    }
+  },
+  {
+    id: 'career-safety',
+    title: '急流勇退处 · 闲庭看花时',
+    english: 'STRATEGIC RETREAT',
+    intro: '此印是功成免咎、知所进退的通透',
+    term1: {
+      title: '急流勇退处',
+      desc: '分甘自保。高光时刻需主动给他人留有光芒和余地，防微杜渐，避免风口浪头。'
+    },
+    term2: {
+      title: '闲庭看花时',
+      desc: '休养生息。在强运中守住本心，享受当下的成功，为下个阶段储备深沉静气。'
+    }
+  },
+  {
+    id: 'destiny-chess',
+    title: '乾坤未定处 · 孤子落奇局',
+    english: 'CHESS MASTER',
+    intro: '此印是运筹帷幄、破茧重立的棋路',
+    term1: {
+      title: '乾坤未定处',
+      desc: '变局无穷。未来依旧充满极高的可操作性，任何一小步改变都能让您绝处逢生。'
+    },
+    term2: {
+      title: '孤子落奇局',
+      desc: '奇兵破冰。用看似不符合常规的、极其直觉的妙手，打破原本复杂的宿命僵局。'
+    }
+  },
+  {
+    id: 'destiny-guide',
+    title: '歧路逢知己 · 金石出深渊',
+    english: 'GUIDING LIGHT',
+    intro: '此印是黑夜指路、贵人托举的守护',
+    term1: {
+      title: '歧路逢知己',
+      desc: '善缘在侧。在迷茫纠结的重大决定关头，会有智者或贵人在暗处为您指引。'
+    },
+    term2: {
+      title: '金石出深渊',
+      desc: '福德回响。先前种下的善意在此间结出福缘，命运的引力会拉扯您脱离泥沼。'
+    }
+  },
+  {
+    id: 'destiny-epiphany',
+    title: '一念花开处 · 执手拨迷雾',
+    english: 'DIVINE EPIPHANY',
+    intro: '此印是直觉觉醒、尘埃落定的关照',
+    term1: {
+      title: '一念花开处',
+      desc: '福至心灵。顺从灵性最先产生的那一缕颤栗，它比所有理性层面的权衡更真实。'
+    },
+    term2: {
+      title: '执手拨迷雾',
+      desc: '自见真相。拨开浮躁喧嚣的大量干扰信息，直视并接纳深层的最终选择吧。'
+    }
+  },
+  {
+    id: 'destiny-renewal',
+    title: '风雷动地起 · 枯木再逢春',
+    english: 'SACRED RENEWAL',
+    intro: '此印是破旧立新、生机重现的转折',
+    term1: {
+      title: '风雷动地起',
+      desc: '剧烈洗礼。当下的动荡是扫清旧累赘的清洗风暴，辞旧迎新阶段无须叹息。'
+    },
+    term2: {
+      title: '枯木再逢春',
+      desc: '枯木逢春。在看似已无退路和枯竭的心底深处，最顽强的生命绿芽正在悄然苏醒。'
+    }
+  },
+  {
+    id: 'destiny-freedom',
+    title: '天玄地黄阔 · 孤鹜逐落霞',
+    english: 'INFINITE FREEDOM',
+    intro: '此印是超脱尘执、生命广袤的胸襟',
+    term1: {
+      title: '天玄地黄阔',
+      desc: '乾坤浩淼。将当下的得失放进浩瀚的人生尺度中，它们不过是渺小微尘罢了。'
+    },
+    term2: {
+      title: '孤鹜逐落霞',
+      desc: '随性高飞。用更超越、自由的心态来看待命运起伏，任凭天地开阔、万念皆安。'
+    }
+  },
+  {
+    id: 'general-quiet',
+    title: '万物生而静 · 虚中纳万象',
+    english: 'QUIET RECEPTIVITY',
+    intro: '此印是虚怀若谷、消解杂念的清修',
+    term1: {
+      title: '万物生而静',
+      desc: '退热宁神。不要总让自己处于高度紧张与超负荷运转状态，安静能汇聚安详能量。'
+    },
+    term2: {
+      title: '虚中纳万象',
+      desc: '包容无碍。放宽容量去纳下世事的荒谬，脑中没有偏执，生命最能澄澈润泽。'
+    }
+  },
+  {
+    id: 'general-persistence',
+    title: '水滴终穿石 · 日日作春耕',
+    english: 'STEADY PROGRESS',
+    intro: '此印是持之以恒、蓄力筑堤的庇护',
+    term1: {
+      title: '水滴终穿石',
+      desc: '量变终极。不要气馁于当下的缓慢进展，水流最不起眼，却可轻易融穿最硬的山。'
+    },
+    term2: {
+      title: '日日作春耕',
+      desc: '静待时日。默默在自己认准的一席之地上浇水育肥，属于您的收获契机已然在途。'
+    }
+  },
+  {
+    id: 'general-solitude',
+    title: '踏遍千山雪 · 孤身点晚灯',
+    english: 'SOLITARY PILGRIMAGE',
+    intro: '此印代表寂静独行、内心高悬的烛光',
+    term1: {
+      title: '踏遍千山雪',
+      desc: '历炼筋骨。灵魂在高度安静的独处中得以极速进化，不与俗人争高下、道短长。'
+    },
+    term2: {
+      title: '孤身点晚灯',
+      desc: '自点心灯。您心房深处的高傲极星比任何外界的喧扰更明快，它正照亮着前路之幽。'
+    }
+  }
+];
+
+export const ATTUNEMENTS = ALL_ATTUNEMENTS;
+
+export const ATTUNEMENTS_BY_CATEGORY: Record<CategoryId, Attunement[]> = {
+  general: [
+    ALL_ATTUNEMENTS[0], // cosmic-alignment
+    ALL_ATTUNEMENTS[1], // transient-balance
+    ALL_ATTUNEMENTS[2], // spiritual-mirror
+    ALL_ATTUNEMENTS[5], // zen-peace
+    ALL_ATTUNEMENTS[4], // resilient-ascent
+    ALL_ATTUNEMENTS[21], // general-quiet
+    ALL_ATTUNEMENTS[22], // general-persistence
+    ALL_ATTUNEMENTS[23], // general-solitude
+  ],
+  love: [
+    ALL_ATTUNEMENTS[0], // cosmic-alignment
+    ALL_ATTUNEMENTS[1], // transient-balance
+    ALL_ATTUNEMENTS[2], // spiritual-mirror
+    ALL_ATTUNEMENTS[6], // love-eternal
+    ALL_ATTUNEMENTS[7], // love-spring
+    ALL_ATTUNEMENTS[8], // love-letgo
+    ALL_ATTUNEMENTS[9], // love-resonance
+    ALL_ATTUNEMENTS[10], // love-reunion
+  ],
+  career: [
+    ALL_ATTUNEMENTS[3], // grand-mastery
+    ALL_ATTUNEMENTS[4], // resilient-ascent
+    ALL_ATTUNEMENTS[0], // cosmic-alignment
+    ALL_ATTUNEMENTS[11], // career-gold
+    ALL_ATTUNEMENTS[12], // career-soar
+    ALL_ATTUNEMENTS[13], // career-jade
+    ALL_ATTUNEMENTS[14], // career-solitary
+    ALL_ATTUNEMENTS[15], // career-safety
+  ],
+  destiny: [
+    ALL_ATTUNEMENTS[0], // cosmic-alignment
+    ALL_ATTUNEMENTS[2], // spiritual-mirror
+    ALL_ATTUNEMENTS[1], // transient-balance
+    ALL_ATTUNEMENTS[16], // destiny-chess
+    ALL_ATTUNEMENTS[17], // destiny-guide
+    ALL_ATTUNEMENTS[18], // destiny-epiphany
+    ALL_ATTUNEMENTS[19], // destiny-renewal
+    ALL_ATTUNEMENTS[20], // destiny-freedom
+  ]
+};
+
+export const CATEGORY_PSYCHOLOGY: Record<CategoryId, { summary: string; context: string }> = {
+  love: {
+    summary: "渴望情感依托与心灵共鸣，在执爱纠结与放手释怀间寻回内心自洽",
+    context: "红尘问卜，大大关乎「执恋与释怀」之自省。当下您的心境印记，精准折射了对于人情羁绊、关系冷暖的强烈在乎或清醒解脱。此印指引您在爱意交织的关口，安放属于自我的那份宁静，照见内在的真相。"
+  },
+  career: {
+    summary: "确立自我意志，在社会价值追求、外界强大承压与长期蛰伏磨砺中谋求突破",
+    context: "功名问卜，大抵关乎「自我意志与外在承压」之博弈。当下您的心境印记，映射着您在工作、学业或事业航道上面临的重重考验亦或进取之姿。以此印提醒您：在喧乱泥沙之下守住恒心，方能不磨灭本真锋芒。"
+  },
+  destiny: {
+    summary: "身处人生变革的风暴或抉择渡口，直感与灵性指引已被悄然唤醒",
+    context: "宿命问卜，大抵关乎「直觉觉醒与方向抉择」之较量。当下您的心境印记，捕获了您在人生新旧剧变、处于十字路口那一刻的强烈内在张力。未来的无常中，此处的意念皆在启示您：当勇敢破茧，或学着超脱俗尘。"
+  },
+  general: {
+    summary: "渴望降噪去焦、平衡身心节奏，在复杂世事中重建沉稳专注的精神底牌",
+    context: "修心问卜，大抵归于「洗尽杂念与本源自省」之清修。当下您的心境印记，倒映出了您身心有所疲竭、渴望清凉超脱的深层呼唤。这是一叶小舟，引导您在此刻梳理步调，重新凝聚起笃定与坚韧的气场。"
+  }
+};
+
+export const ATTUNEMENT_MINDSET_MAP: Record<string, string> = {
+  'cosmic-alignment': "历经重重尘雾与外界纷扰后，您正重新连接本真自我，寻回归本位坦荡与底气的心境",
+  'transient-balance': "厌倦内耗执着，心境正极力将得失化为过眼云烟，并在大江大河般的辽阔中寻求平抚",
+  'spiritual-mirror': "渴望屏绝红尘喧嚣杂音，拂拭去对错算计，进入一种自审、极度纯粹且澄澈的精神澄明",
+  'grand-mastery': "内心的破局意识已然觉醒，不为一时纷争迷眼，正以极高明的心智整合当下琐屑的大格局",
+  'resilient-ascent': "正经历心智重铸的沙场，虽面临逆潮挤压，内心却涌动着逆流而上的坚白之气与自立意志",
+  'zen-peace': "身心极度疲惫而本能开启自我防御，迫切渴望屏蔽琐碎耗损、寻到一息清凉的新生温存",
+  
+  // 情感 (Love)
+  'love-eternal': "在俗尘纷繁中对一份真挚的爱意怀抱至深信念，渴望实现超越朝暮与时空阻隔的灵魂共鸣",
+  'love-spring': "情感在沉寂冰封中重逢冰雪消融的暖阳，沉寂心弦正试探着重新泛起润泽的温柔波澜",
+  'love-letgo': "对过往印记心存感恩，已做好体面放手与告别纠葛的心理准备，带着清醒的释然奔向新生",
+  'love-resonance': "内心渴望真诚、赤裸无饰的表达，正在发出宁缺毋滥的振频，召唤与自己天然相契的灵魂",
+  'love-reunion': "阅尽情缘曲折而更知圆满不易，内心已拂去重重执拗误解，正以最温润的和解期盼彼心重温",
+  
+  // 功名 (Career)
+  'career-gold': "在高压琐碎的学业或事业大局中，咬紧牙关稳住核心基本盘，相信真金必能在乱局中淘沙而出",
+  'career-soar': "破圈势能已积蓄至极点，不肯再屈就无望的教条，迫切渴望一展主见、实现跨越飞跃的大斗志",
+  'career-jade': "处于蜕变前夕，对自身的长线价值怀有笃定直感，正积极渴望在一场高强度的历练中玉成锋芒",
+  'career-solitary': "无惧四周支撑匮乏或冷漠被动，在孤立之境里，依靠心底的高傲与强大自立拉起坚定的风月",
+  'career-safety': "深谙明哲保身、藏锋于钝的博弈智慧，能主动让渡眼前高光，把核心力量收纳回安详的日常里",
+
+  // 宿命 (Destiny)
+  'destiny-chess': "面对未来混沌的命运之锁，不甘听任摆布，随时准备用敏锐心流出其不意地走出一招活路",
+  'destiny-guide': "身处方向性动荡或心神不安的十字路口，心生预兆，正在呼唤并准备顺应冥冥中的贵人指引",
+  'destiny-epiphany': "不再随从繁复、令人焦虑的利弊得失算计，正决定重返本能直觉、以极大魄力一锤定音",
+  'destiny-renewal': "处于破旧立新、洗髓换骨的痛感交接期，心神有强力自我更新机制，已在枯萎处孕育绿芽",
+  'destiny-freedom': "以宏大的天地、时空尺度来消解局部的蝇营狗苟，体验着自我超越、随处自在的旷达悠游",
+
+  // 修心 (General)
+  'general-quiet': "身心负重前行后渴望重返最初安详，极力平息情绪波澜，试图在和光同尘中治愈一切焦灼",
+  'general-persistence': "在看似温吞或停滞局势下持守定力，不贪功近利，正以脚踏实地的高纯度专注重拾沉稳步调",
+  'general-solitude': "享受彻底静止的孤悬，主动与外界喧杂作切割，在高度独立的独处之野凝聚绝对清醒的力量"
+};
+
+export const getSeekerFriendlyDesc = (id: string, index: number, originalDesc: string): string => {
+  const customMap: Record<string, [string, string]> = {
+    'cosmic-alignment': [
+      "您心灵深处有种返璞归真的力量，表明历经重重疑虑后，您正重新找回属于自己最本真、最坦荡的原动力与底气。",
+      "当下即便境遇仍有变动，但您内心深处已被本命之极星照亮，那些无形的因果脉络正顺应天枢，逐步消融眼前的重重困局。"
+    ],
+    'transient-balance': [
+      "您开始厌倦无休止的内耗执念，心灵正极力学着将过往得失化为过眼云烟，渴望放过自己，寻回难得的释怀与宽广。",
+      "不管外界的环境如何风起云涌，您当下都在寻求或已经找到了一片如同大江般宽广宁静的心理安全岛，能够平静包容一切。"
+    ],
+    'spiritual-mirror': [
+      "您渴望将浮尘杂音、纷繁对错全部拂拭干净，重回一种高纯度的直觉状态，时时反求诸己，不随任何虚无的声音起舞。",
+      "代表您正处于放下一切挂碍、彻底接纳自己不完美的重要关口。本来无一物，那些极度困扰您的执着此刻正在被您消解。"
+    ],
+    'grand-mastery': [
+      "您内心的破局意识正在悄然苏醒，感受到身边的客观势能与事物发展的规律，正在往最为适合您的正面方向发生着偏转。",
+      "当下您拥有吞吐局部的心理广阔性。这不是一时的意气，而是您深层次的智慧在支持着您，能举重若轻地统筹一切纷争。"
+    ],
+    'resilient-ascent': [
+      "您正处在一场心智重铸的磨砺中。虽然面临逆风，但您内心充满了逆流而上的坚白之气，每一步艰难跋涉都是在积聚反转之势。",
+      "表明您有着一种独自对抗巨大不确定性的傲骨。那种敢在风浪里蜕变、独占风头、立克艰难的坚韧意志已在此次祈愿中显现。"
+    ],
+    'zen-peace': [
+      "您渴望在当下最紧绷的生活噪音中按下一个暂停键，从那些纠葛且毫无滋养的琐碎耗损中抽离出来，以此深呼吸重建秩序。",
+      "预示着您心底某个枯竭干枯、长期得不到滋润的角落，正重新照射进温存坚实的新生微光，内在的生机已经开始悄然复苏。"
+    ],
+    'love-eternal': [
+      "表明您对于一段真挚的关系具有无比深厚的笃定信念，渴望两颗心灵实现超越世俗限制的灵魂共振，平静而充实。",
+      "您当下渴望一种自由自洽的舒适距离。不再纠缠于朝夕的患得患失和感情中的权衡博弈，以极大胸襟给予爱最松弛的态度。"
+    ],
+    'love-spring': [
+      "表明您在感情的荒野或迷阵中正迎来冰雪初融、万物萌生的温柔契机，压抑压伏多时的敏感真情开始重新温润焕生。",
+      "您正尝试着与过往一切旧伤、旧情结与求而不得的人事物達成和解，像溪水奔向平野一样，带着爱而自由的心奔涌前行。"
+    ],
+    'love-letgo': [
+      "表明您心存感恩，愿意承认那份交往或曾经的交叠在您生命里刻下的美好印记，以此作为您继续向前的重要养分与心理基石。",
+      "您已经做好了洒脱抽身的心理准备。明白有时候放过对方、给对方自由亦是给自己的救赎。您正带着最体面的清醒告别困惑。"
+    ],
+    'love-resonance': [
+      "您心中那份真挚的表达与强烈的需要，正经历着前所未有的频率共振。您的磁场正在呼唤着并终能等来那个真诚相合的共鸣。",
+      "表明您不再愿意在情感中伪装、迎合或委曲求全。您极度渴望找到完全原生态、自然流动且不需要刻意解释的灵魂相契者。"
+    ],
+    'love-reunion': [
+      "您深知世事无常、感情中的缺憾都是修行的一环。您当下正满怀希冀，对经历了一番曲折磨难之后的圆满带有强大的信念感。",
+      "您正试图用理性而温润的清风拂散那些横亘在两颗心之间的重重误会和偏见。起念之际，您内心的温柔已经战胜了执拗娇蛮。"
+    ],
+    'career-gold': [
+      "表明您在极其繁冗、高压的工作与学业琐碎之下，依然坚持不懈地稳住自我的核心基本盘，正在经历一场去浮华的磨炼过程。",
+      "您坚信付出的微小努力都不会白费。这股深沉的耐力表明，当大浪淘沙、泡沫吹散之时，您不可替代的真金才干必然惊艳四方。"
+    ],
+    'career-soar': [
+      "表明您长久蛰伏的破圈势能已经蓄势待发。面对极佳的机会，您渴望大张旗鼓地展示主见，实现生命和事业地位上的飞跃变迁。",
+      "您对困难和繁杂的教条规则拥有一种破局一战的昂扬斗志。坚决不再受无谓束缚，誓要执掌自我职业与学业大盘的绝对主权。"
+    ],
+    'career-jade': [
+      "您能清醒且谦逊地预感到自己正孕育着极为庞大的成器潜能，只是表层粗石尚未雕刻。您对自我的长远价值有着极其敏锐的认知。",
+      "表明您非常渴望通过一场深刻、高强度的真刀真枪历练来促成自我的跨越式转型，在千锤百炼后让自身的能量得到爆发式升华。"
+    ],
+    'career-solitary': [
+      "哪怕四周缺乏有力的支持或陷入某种孤立无援的僵局，您内心的自傲与自立依然能拉起一道不可撼动的生命支柱。",
+      "您拥有顶住惊涛骇浪、力挽狂澜的精神底盘。这说明您在危机关头的冷静与不可替代性，是您此时叩问仕途最锋利的铠甲。"
+    ],
+    'career-safety': [
+      "当下的您具有高明的心灵克制与政治成熟。在繁华或高光之下，您能克制欲望、主动让渡锋芒，追求自保与明哲的通透局境。",
+      "表明您渴望把宝贵的注意力收回到自己真实的日常和家庭中，通过在巅峰时刻守住平和静气，来为下一次复出提供长线势能。"
+    ],
+    'destiny-chess': [
+      "在未来的命运局境面前，您认为人生的大局仍有无限可能。即便棋至绝路，每一小步理智勇敢的微调依然能让您绝地逢生。",
+      "表明您对当下混沌棘手的抉择难题，做好了不按常理出牌、遵循强大灵性直觉一招制胜的魄力。这正是您打破僵局的关键契机。"
+    ],
+    'destiny-guide': [
+      "在面对重大十字路口的迷茫时刻，您能敏锐察觉到某种来自本能的觉醒指引。有一双不期而遇的明灯之手正在您的前路上接应。",
+      "您长久以来在人世间种下的善意正在此时发挥巨大的因果拉引力。冥冥中的贵人星照，正托举您摆脱长久缠绕的无形精神之痛。"
+    ],
+    'destiny-epiphany': [
+      "您当下极其顺从灵性在最初所发生的那一缕微颤。您意识到相比于一万种思前想后的利弊算计，纯粹的心流直觉才算得上真言。",
+      "您在叩心祈愿中做好了大刀阔斧拨乱反正的准备。排除掉干扰您心智的所有琐碎意见，让内心深处早已确立的真相全然彰显。"
+    ],
+    'destiny-renewal': [
+      "您正面临着辞旧迎新、新旧剧烈交接的心境洗礼。您明白那些原本不属于您的负担，正在被一场看似无情的变局清扫殆尽。",
+      "您对命运拥有一种不可摧毁的自我更新与修复力。在看似枯萎到极点的局面下，深层潜意识里最生机蓬勃的绿芽已悄然出土。"
+    ],
+    'destiny-freedom': [
+      "您懂得用极富灵性的宏大天地尺度来看待当下的琐碎烦忧。将纠葛一时的爱恨名利放诸无限时空，让它们瞬间释去压力。",
+      "代表您正处于极具超脱性与开阔性的心灵状态，如落霞之旁的孤鹜般任意遨游不为锁闭所困，体会到自我内心和天地共鸣的辽远。"
+    ],
+    'general-quiet': [
+      "您对自己长期的心理超载感到了明确的疲倦，渴望通过全然退热的温存，将自己的心率和思维拉回到一个极其安详健康的基点。",
+      "代表您对复杂的矛盾有了一种宏大、无有执偏的容纳度。不去做任何刻意的辩解，以一种厚重的水火不侵的包容感治愈自己。"
+    ],
+    'general-persistence': [
+      "您当前虽然觉得前路有些温吞甚至停滞，但内心的信念却正以一种极其沉稳的方式进行筑堤积蓄，您比任何人都知道专注的可贵。",
+      "代表您重获脚踏土地、春种秋收的笃定心理节奏。您当下最想做的是专注做好手头最确定的小事，静候因缘果实的不期而遇。"
+    ],
+    'general-solitude': [
+      "您享受或极度渴望一种完全静止、与外界喧杂主动隔离的高纯度独处。在这份崇高的雪原里，您内心的敏锐觉知正在经历蜕变升华。",
+      "您正在自己的心室深处燃起一盏代表对自我绝对自信、永不屈服的晚灯。这道高悬的内心烛火将比任何言语抚慰都更具指引力量。"
+    ]
+  };
+
+  return customMap[id]?.[index] || originalDesc;
+};
+
 export default function App() {
   // --- States ---
   const [category, setCategory] = useState<CategoryId>('love');
@@ -195,7 +746,6 @@ export default function App() {
   const [chosenAnswer, setChosenAnswer] = useState<Answer | null>(null);
   
   const [isMuted, setIsMuted] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [showValidationError, setShowValidationError] = useState<string | null>(null);
   
   // History Records
@@ -205,7 +755,6 @@ export default function App() {
   
   // Audio stop handling
   const stopPadRef = useRef<(() => void) | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   
   // Touching sensory locations
   const [touchCoords, setTouchCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -216,23 +765,66 @@ export default function App() {
 
   // --- Share Modal & Generation States ---
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [showAttunementModal, setShowAttunementModal] = useState(false);
+  const [activeAttunement, setActiveAttunement] = useState<Attunement>(ATTUNEMENTS[0]);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // States for generating card image for native long-press saving
+  const [generatedImg, setGeneratedImg] = useState<string | null>(null);
+  const [isGeneratingImg, setIsGeneratingImg] = useState(false);
+
+  // Auto-generate high-res card image when user gets a revelation
+  useEffect(() => {
+    if (appState === 'reveal' && chosenAnswer) {
+      setGeneratedImg(null);
+      
+      // Wait for the text animation to fully complete (approx 20 chars * 0.08 = 1.6s)
+      const delayMs = Math.max(1200, Math.min(2200, chosenAnswer.text.length * 80 + 200));
+      const timer = setTimeout(() => {
+        const element = document.getElementById('destiny-book-card');
+        if (element) {
+          setIsGeneratingImg(true);
+          html2canvas(element, {
+            useCORS: true,
+            scale: 2, // 2x high-resolution crispness for long-press saving
+            backgroundColor: '#fbf8eb', // parchment background tone
+            logging: false,
+          }).then((canvas) => {
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+            setGeneratedImg(dataUrl);
+            setIsGeneratingImg(false);
+          }).catch((err) => {
+            console.error('Html2canvas error:', err);
+            setIsGeneratingImg(false);
+          });
+        }
+      }, delayMs);
+
+      return () => clearTimeout(timer);
+    } else {
+      setGeneratedImg(null);
+    }
+  }, [appState, chosenAnswer]);
 
   // --- Daily Divination Limits & Sharing Bonus ---
   const [usedToday, setUsedToday] = useState(0);
   const [bonusReadings, setBonusReadings] = useState(0);
 
-  const BASELINE_LIMIT = 8;
+  const BASELINE_LIMIT = 3;
   const attemptsLeft = Math.max(0, BASELINE_LIMIT + bonusReadings - usedToday);
 
-  // Grant sharing bonus
+  // Grant sharing bonus (up to 2 times per day)
   const grantShareBonus = () => {
+    if (bonusReadings >= 2) {
+      showToast('✨ 今日增福已达上限：每日分享增加祈愿上限为两次，感谢您的虔诚分享！');
+      return;
+    }
     const nextBonus = bonusReadings + 1;
     setBonusReadings(nextBonus);
     localStorage.setItem('answers_book_daily_bonus', nextBonus.toString());
-    showToast('✨ 随缘增福：善因结得善果，感念合十，已为您增添一次问卜机缘。');
+    showToast(`✨ 随缘增福：善因结得善果，感念合十，已为您额外增添一次问卜机缘。(今日第 ${nextBonus}/2 次分享赠礼)`);
   };
 
   // Load history & daily limits from localStorage on mount
@@ -246,10 +838,18 @@ export default function App() {
       }
     }
 
+    // Force clear/reset to 0 used today for current design iteration session
+    const resetDone = localStorage.getItem('answers_book_reset_to_3_v2');
+    if (!resetDone) {
+      localStorage.setItem('answers_book_daily_used', '0');
+      localStorage.setItem('answers_book_daily_bonus', '0');
+      localStorage.setItem('answers_book_reset_to_3_v2', 'true');
+    }
+
     // Daily limit initialization configuration
     const today = new Date().toLocaleDateString('zh-CN');
     const savedDate = localStorage.getItem('answers_book_daily_date');
-    if (savedDate === today) {
+    if (savedDate === today && resetDone) {
       const u = localStorage.getItem('answers_book_daily_used');
       const b = localStorage.getItem('answers_book_daily_bonus');
       setUsedToday(u ? parseInt(u, 10) : 0);
@@ -269,101 +869,6 @@ export default function App() {
     localStorage.setItem('answers_book_records', JSON.stringify(newRecords));
   };
 
-  // Speaks active answer with SpeechSynthesis
-  const speakAnswer = () => {
-    if (!chosenAnswer) return;
-    
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      setToastMessage('您的浏览器当前不支持语音朗读，请尝试在主流浏览器中打开。');
-      setTimeout(() => setToastMessage(null), 3000);
-      return;
-    }
-
-    try {
-      if (isSpeaking) {
-        window.speechSynthesis.cancel();
-        setIsSpeaking(false);
-        return;
-      }
-
-      // Stop any pending speech and ensure synthesis is resumed
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.resume();
-
-      const textToSpeak = `答案之书对你的宿命指引是：“${chosenAnswer.text}”。命运之批注显示：${chosenAnswer.interpretation}`;
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utteranceRef.current = utterance; // Prevent garbage collection bug
-      
-      utterance.lang = 'zh-CN';
-      utterance.rate = 0.95; // Slightly slower, more solemn pace
-      utterance.pitch = 1.0;  // Normal pleasant pitch
-
-      // Find a nice Chinese voice if available
-      const voices = window.speechSynthesis.getVoices();
-      let zhVoice = voices.find(v => 
-        (v.lang.toLowerCase().includes('zh') || v.lang.toLowerCase().includes('chn')) && 
-        (v.name.includes('Siri') || v.name.includes('Tingting') || v.name.includes('Xiaoxiao') || v.name.includes('Natural') || v.name.includes('Premium') || v.name.includes('Yating') || v.name.toLowerCase().includes('google'))
-      );
-      if (!zhVoice) {
-        zhVoice = voices.find(v => v.lang.toLowerCase().includes('zh') || v.lang.toLowerCase().includes('chn'));
-      }
-      
-      if (zhVoice) {
-        utterance.voice = zhVoice;
-      }
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-      };
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        utteranceRef.current = null;
-      };
-
-      utterance.onerror = (err) => {
-        console.warn('Speech synthesis utterance error:', err);
-        setIsSpeaking(false);
-        utteranceRef.current = null;
-        
-        // Show context-aware warnings
-        if (err.error === 'not-allowed') {
-          setToastMessage('因浏览器安全策略，您需要任意点击一下页面后重新点击播放。');
-        } else {
-          setToastMessage('语音合成受限，部分流览器或预览框架未授权声音通道，可尝试再次点击或使用新窗口。');
-        }
-        setTimeout(() => setToastMessage(null), 4000);
-      };
-
-      // Wrap in a setTimeout to give the browser's asynchronous cancel() time to clear, avoiding immediate cancellation of the new speech.
-      setTimeout(() => {
-        try {
-          window.speechSynthesis.speak(utterance);
-          // Set state immediately to indicate trying to read, in case onstart is delayed
-          setIsSpeaking(true);
-        } catch (speakErr) {
-          console.error('Failed to speak:', speakErr);
-          setIsSpeaking(false);
-          setToastMessage('语音播放遇到障碍，可以尝试右上方新窗口。');
-          setTimeout(() => setToastMessage(null), 3000);
-        }
-      }, 80);
-
-    } catch (e) {
-      console.error('Unexpected error in speakAnswer:', e);
-      setIsSpeaking(false);
-      setToastMessage('您的浏览器限制了语音播放，请在新窗口打开体验全功能。');
-      setTimeout(() => setToastMessage(null), 3000);
-    }
-  };
-
-  // Speech cleanups
-  useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel();
-    };
-  }, []);
-
   // Touch and Hold Attuning Cycle
   const attuneTimerRef = useRef<number | null>(null);
   
@@ -372,7 +877,11 @@ export default function App() {
     if (appState !== 'cover') return;
 
     if (attemptsLeft <= 0) {
-      setShowValidationError('🔮 今日问卜已达上限，点击上方「命理谱」分享记录，续得一次卜问福缘。');
+      if (bonusReadings < 2) {
+        setShowValidationError('🔮 今日天机已竭。\n点击「命理谱」分享记录，可额外获赠福缘。');
+      } else {
+        setShowValidationError('🔮 今日问卜已达上限，天机暂避。收藏本页链接，明天准时续缘~');
+      }
       setTimeout(() => setShowValidationError(null), 8000);
       return;
     }
@@ -408,7 +917,7 @@ export default function App() {
     }
 
     const startTime = Date.now();
-    const duration = 1800; // 1.8 seconds to fully unlock
+    const duration = 2300; // 2.3 seconds to fully unlock
 
     attuneTimerRef.current = window.setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -440,7 +949,7 @@ export default function App() {
       // Failed to attune long enough
       setAppState('cover');
       setAttuningProgress(0);
-      setShowValidationError('「念力不足，法阵散逸」 请按压不低于2秒，虔诚冥想你的问题。');
+      setShowValidationError('「念力不足，法阵散逸」\n请持续按压，虔诚静心冥想。');
       setTimeout(() => setShowValidationError(null), 4000);
     }
   };
@@ -462,6 +971,11 @@ export default function App() {
     const selectedAnswer = pool[randomIndex];
     setChosenAnswer(selectedAnswer);
 
+    // Pick a random Attunement Seal status corresponding to selected category
+    const attunementPool = ATTUNEMENTS_BY_CATEGORY[category] || ATTUNEMENTS_BY_CATEGORY['general'];
+    const randomAttunement = attunementPool[Math.floor(Math.random() * attunementPool.length)];
+    setActiveAttunement(randomAttunement);
+
     // Increment used count for new divination
     const nextUsed = usedToday + 1;
     setUsedToday(nextUsed);
@@ -479,6 +993,7 @@ export default function App() {
       luckyColor: selectedAnswer.luckyColor,
       luckyNumber: selectedAnswer.luckyNumber,
       hexagram: selectedAnswer.hexagram,
+      attunementId: randomAttunement.id,
     };
 
     saveRecords([newRecord, ...historyRecords]);
@@ -500,8 +1015,6 @@ export default function App() {
     setAttuningProgress(0);
     setShowValidationError(null);
     setIsViewingPastRecord(false);
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
   };
 
   // Display previous records inside the book
@@ -517,6 +1030,10 @@ export default function App() {
       luckyNumber: rec.luckyNumber,
       hexagram: rec.hexagram,
     };
+    
+    // Find the saved attunement or fall back to the default one if not found
+    const savedAttunement = ATTUNEMENTS.find(att => att.id === rec.attunementId) || ATTUNEMENTS[0];
+    setActiveAttunement(savedAttunement);
     
     setChosenAnswer(virtualAnswer);
     setIsViewingPastRecord(true);
@@ -757,11 +1274,11 @@ export default function App() {
             ctx.textAlign = 'left';
             ctx.fillStyle = '#44403c';
             ctx.font = 'bold 12px "PingFang SC", "Songti SC", serif';
-            ctx.fillText('大德归本位 · 宿命归天枢', 136, badgeCenterY - 4);
+            ctx.fillText(activeAttunement.title, 136, badgeCenterY - 4);
 
             ctx.fillStyle = '#78716c';
             ctx.font = 'bold 9px monospace';
-            ctx.fillText('ATTUNEMENT UNSEALED', 136, badgeCenterY + 11);
+            ctx.fillText(activeAttunement.english, 136, badgeCenterY + 11);
           }
 
           currentY = badgeCenterY + 50;
@@ -1214,10 +1731,10 @@ export default function App() {
                       initial={{ opacity: 0, y: -5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -5 }}
-                      className="absolute top-full mt-4 p-3 bg-red-950/40 border border-red-500/20 rounded-xl flex items-center space-x-2 text-rose-300 text-xs font-serif shadow-xl z-20"
+                      className="absolute top-full mt-4 p-3 bg-red-950/40 border border-red-500/20 rounded-xl flex items-start space-x-2.5 text-rose-300 text-xs font-serif shadow-xl z-20"
                     >
-                      <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-                      <span>{showValidationError}</span>
+                      <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                      <span className="whitespace-pre-line text-left leading-normal">{showValidationError}</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1356,18 +1873,6 @@ export default function App() {
               transition={{ duration: 0.6, ease: 'easeOut' }}
               className="w-full flex flex-col items-center"
             >
-              {/* Floating micro-badge reminding users how to export/save */}
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                onClick={handleOpenShare}
-                className="mb-4 flex items-center space-x-2 px-4 py-1.5 bg-amber-500/10 backdrop-blur-md border border-amber-500/20 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.4)] cursor-pointer hover:bg-amber-500/20 hover:border-amber-500/30 transition-all group shrink-0"
-              >
-                <Download className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 active:scale-95 transition-all animate-bounce" />
-                <span className="font-serif text-[10.5px] text-amber-200/90 tracking-[0.18em] uppercase select-none font-medium">长按保存至相册 · 导出命运神签</span>
-              </motion.div>
-
               {/* Double page ancient book layouts */}
               <div id="destiny-book-card" className="w-full max-w-4xl parchment-paper text-slate-900 rounded-3xl overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),0_10px_30px_rgba(212,175,55,0.1)] border border-amber-500/20 flex flex-col md:flex-row relative">
                 {/* Spine crease strip */}
@@ -1407,16 +1912,23 @@ export default function App() {
                   </div>
 
                   {/* Ancient graphic seal design */}
-                  <div className="flex items-center space-x-3 border-t border-stone-300/60 pt-4 text-stone-500">
-                    <div className="w-10 h-10 rounded-full border border-stone-400/40 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4 text-amber-800/60" />
+                  <div 
+                    onClick={() => setShowAttunementModal(true)}
+                    className="flex items-center space-x-3 border-t border-stone-300/60 pt-4 text-stone-500 cursor-pointer hover:opacity-90 active:scale-[0.98] transition-all duration-200 select-none group"
+                    title="点击解读此句释义"
+                  >
+                    <div className="w-10 h-10 rounded-full border border-stone-400/40 flex items-center justify-center group-hover:border-amber-700/60 group-hover:bg-amber-105/30 transition-all">
+                      <Sparkles className="w-4 h-4 text-amber-800/60 group-hover:text-amber-700 group-hover:scale-110 transition-all" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-serif font-bold text-stone-700 tracking-wider">
-                        大德归本位 · 宿命归天枢
-                      </span>
-                      <span className="text-[9px] font-mono uppercase tracking-widest text-stone-400">
-                        ATTUNEMENT {isViewingPastRecord ? 'RECORDED' : 'UNSEALED'}
+                      <div className="flex items-center space-x-1">
+                        <span className="text-[10px] font-serif font-bold text-stone-700 tracking-wider group-hover:text-amber-800 transition-colors">
+                          {activeAttunement.title}
+                        </span>
+                        <HelpCircle className="w-3.5 h-3.5 text-stone-400 group-hover:text-amber-600 transition-all shrink-0 animate-pulse" />
+                      </div>
+                      <span className="text-[9px] text-stone-500 font-serif leading-relaxed mt-0.5 group-hover:text-amber-800 transition-colors">
+                        叩心祈愿凝灵印 • 起念占问映心神
                       </span>
                     </div>
                   </div>
@@ -1424,6 +1936,15 @@ export default function App() {
 
                 {/* Right Page: The core answering reveal */}
                 <div className="flex-1 p-6 sm:p-9 md:p-12 flex flex-col justify-between min-h-[340px] relative">
+                  {/* Overlay image for native browser/WeChat long-press saving */}
+                  {generatedImg && (
+                    <img
+                      src={generatedImg}
+                      alt="长按保存命运神签"
+                      className="absolute inset-0 w-full h-full opacity-0 pointer-events-auto z-20 cursor-default select-none"
+                      style={{ WebkitTouchCallout: 'default' }}
+                    />
+                  )}
                   {/* Classical exquisite double border frame */}
                   <div className="absolute inset-2 border-2 border-amber-800/10 pointer-events-none rounded-xl" />
                   <div className="absolute inset-3 border border-dashed border-amber-800/15 pointer-events-none rounded-lg" />
@@ -1499,39 +2020,40 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Floating micro-badge reminding users how to export/save */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                onClick={handleOpenShare}
+                className="mt-6 -mb-2 flex items-center space-x-2 px-4 py-1.5 bg-amber-500/10 backdrop-blur-md border border-amber-500/20 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.4)] cursor-pointer hover:bg-amber-500/20 hover:border-amber-500/30 transition-all group shrink-0"
+              >
+                <Download className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 active:scale-95 transition-all animate-bounce" />
+                <span className="font-serif text-[10.5px] text-amber-200/90 tracking-[0.14em] uppercase select-none font-medium">
+                  {isGeneratingImg ? "候天机凝聚画卷中..." : "长按页面部分可直接保存至相册"}
+                </span>
+              </motion.div>
+
               {/* Interactive post-read button bar */}
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 w-full">
+              <div className="mt-8 flex flex-row items-center justify-center gap-3 w-full max-w-sm sm:max-w-md mx-auto px-4">
                 {/* Immersive Modal Share Trigger - Now styled like the main Immersive UI stark white CTA */}
                 <button
                   onClick={handleOpenShare}
-                  className="group relative cursor-pointer pointer-events-auto active:scale-95 transition-all text-black"
+                  className="flex-1 group relative cursor-pointer pointer-events-auto active:scale-95 transition-all text-black"
                 >
                   <div className="absolute inset-0 bg-white/10 blur-xl group-hover:bg-white/20 transition-all rounded-full" />
-                  <div className="relative px-8 py-3.5 bg-white text-black text-xs uppercase tracking-[0.2em] font-bold rounded-full overflow-hidden flex items-center gap-2 border border-white/50 shadow-2xl">
-                    <Share2 className="w-3.5 h-3.5 text-black" />
+                  <div className="relative w-full h-11 bg-white text-black text-[11px] sm:text-xs uppercase tracking-[0.1em] sm:tracking-[0.2em] font-bold rounded-full overflow-hidden flex items-center justify-center gap-1.5 border border-white/50 shadow-2xl">
+                    <Share2 className="w-3.5 h-3.5 text-black shrink-0" />
                     <span>分享命运神签</span>
                   </div>
-                </button>
-
-                {/* Speech read button */}
-                <button
-                  onClick={speakAnswer}
-                  className={`flex items-center space-x-2 px-6 py-3.5 rounded-full border text-xs font-serif font-medium tracking-wider transition-all duration-200 cursor-pointer pointer-events-auto shadow-lg active:scale-95 ${
-                    isSpeaking
-                      ? 'bg-[#ff4e00]/20 text-white border-[#ff4e00]/40'
-                      : 'bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.08] text-stone-200 hover:text-white'
-                  }`}
-                >
-                  <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'animate-bounce text-[#ff4e00]' : 'text-stone-300'}`} />
-                  <span>{isSpeaking ? '正在宣读占卜...' : '听审神婆密念'}</span>
                 </button>
 
                 {/* Reset button - Now styled as secondary outline button */}
                 <button
                   onClick={handleReset}
-                  className="flex items-center space-x-2 px-6 py-3.5 rounded-full bg-white/[0.03] border border-white/10 hover:border-amber-500/25 hover:bg-amber-500/5 hover:text-amber-200 text-stone-200 text-xs font-serif font-medium tracking-wider transition-all duration-200 cursor-pointer pointer-events-auto shadow-lg active:scale-95 group"
+                  className="flex-1 flex items-center justify-center h-11 space-x-1.5 rounded-full bg-white/[0.03] border border-white/10 hover:border-amber-500/25 hover:bg-amber-500/5 hover:text-amber-200 text-stone-200 text-[11px] sm:text-xs font-serif font-medium tracking-wider transition-all duration-200 cursor-pointer pointer-events-auto shadow-lg active:scale-95 group"
                 >
-                  <Undo2 className="w-3.5 h-3.5 text-stone-300 group-hover:text-amber-400 group-hover:animate-pulse" />
+                  <Undo2 className="w-3.5 h-3.5 text-stone-300 group-hover:text-amber-400 group-hover:animate-pulse shrink-0" />
                   <span>再度占叩心愿</span>
                 </button>
               </div>
@@ -1541,24 +2063,25 @@ export default function App() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className="mt-6 flex flex-wrap items-center justify-center gap-2.5 px-4 py-2 bg-white/[0.02] border border-white/5 rounded-full select-none text-stone-400 font-serif text-[10.5px] shadow-[0_4px_12px_rgba(0,0,0,0.1)] shrink-0 z-10"
+                className={`mt-6 flex items-center justify-center gap-2 px-5 py-2 rounded-full select-none font-serif text-[10.5px] shadow-[0_4px_12px_rgba(0,0,0,0.1)] shrink-0 z-10 ${
+                  attemptsLeft <= 0 
+                  ? "bg-amber-950/20 border border-amber-500/20 text-amber-200/90" 
+                  : "bg-white/[0.02] border border-white/5 text-stone-400"
+                }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-                <span>
-                  今日已占问 {usedToday} 次，天机余量: <span className="font-sans font-semibold text-amber-300">{attemptsLeft}</span> / {BASELINE_LIMIT} 次
-                  {bonusReadings > 0 && <span className="text-emerald-400 ml-1 font-sans font-medium">(含结缘赠礼 +{bonusReadings} 次)</span>}
-                </span>
-                <span className="hidden sm:inline text-white/10 w-[1px] h-3 bg-white/10" />
-                <button 
-                  onClick={() => {
-                    setIsShareModalOpen(true);
-                    showToast("🔮 随缘增福：分享当前神签或复制链接，即可再增一次问卜福缘。");
-                  }}
-                  type="button"
-                  className="font-serif text-[10.5px] text-amber-500 hover:text-amber-400 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  分享结缘增福
-                </button>
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                {attemptsLeft <= 0 ? (
+                  bonusReadings < 2 ? (
+                    <span className="text-center whitespace-nowrap">今日天机已竭，可在下方「分享命运神签」以重获卜问福缘 (今日已赠: +{bonusReadings}/2次)</span>
+                  ) : (
+                    <span className="text-amber-300/90 font-medium text-center whitespace-nowrap">今日问卜已达上限，天机暂避。收藏本页链接，明天准时续缘~</span>
+                  )
+                ) : (
+                  <span>
+                    今日已占问 {usedToday} 次，天机余量: <span className="font-sans font-semibold text-amber-300">{attemptsLeft}</span> / {BASELINE_LIMIT + bonusReadings} 次
+                    {bonusReadings > 0 && <span className="text-emerald-400 ml-1 font-sans font-medium">(含结缘赠礼 +{bonusReadings} 次)</span>}
+                  </span>
+                )}
               </motion.div>
             </motion.div>
           )}
@@ -1742,10 +2265,105 @@ export default function App() {
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-8 left-1/2 transform -translate-x-1/2 z-[100] px-5 py-3.5 bg-stone-900 border border-amber-500/30 text-stone-100 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex items-center space-x-2.5 max-w-[90vw] md:max-w-md pointer-events-auto"
+            className="fixed top-8 left-1/2 transform -translate-x-1/2 z-[100] px-5 py-3.5 bg-stone-900 border border-amber-500/30 text-stone-100 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex items-center space-x-2.5 w-[calc(100%-2.5rem)] sm:w-max max-w-md pointer-events-auto"
           >
             <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
             <span className="text-xs font-serif leading-relaxed tracking-wide text-left">{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- Attunement Info Modal (大德归本位 · 宿命归天枢 释义弹窗) --- */}
+      <AnimatePresence>
+        {showAttunementModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={() => setShowAttunementModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              className="parchment-paper border-2 border-amber-800/20 rounded-2xl w-full max-w-[315px] sm:max-w-[350px] shadow-[0_15px_40px_rgba(139,92,26,0.25)] flex flex-col p-5 sm:p-6 space-y-4 relative text-slate-800 text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Classical Double Frame Accents */}
+              <div className="absolute inset-1.5 border border-amber-800/10 pointer-events-none rounded-xl" />
+              <div className="absolute inset-2 border border-dashed border-amber-800/10 pointer-events-none rounded-lg" />
+              <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-amber-800/30 pointer-events-none" />
+              <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-amber-800/30 pointer-events-none" />
+              <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-amber-800/30 pointer-events-none" />
+              <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b border-r border-amber-800/30 pointer-events-none" />
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowAttunementModal(false)}
+                className="absolute top-2.5 right-2.5 rounded-full p-1 bg-stone-800/5 hover:bg-stone-800/10 text-stone-600 transition-all cursor-pointer z-10"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Header Title */}
+              <div className="text-center pb-1 border-b border-amber-800/10 flex flex-col items-center">
+                <div className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-800/10 border border-amber-800/15 mb-1 shrink-0">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-800" />
+                </div>
+                <h3 className="font-serif text-[13px] font-bold text-amber-950 tracking-wide">
+                  {activeAttunement.title}
+                </h3>
+                <p className="text-[8px] font-mono uppercase tracking-widest text-amber-800/70 mt-0.5 mb-1.5">
+                  {activeAttunement.english}
+                </p>
+                <div className="text-[9.5px] font-serif leading-relaxed text-amber-900 bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-800/15 select-none w-full text-left font-medium">
+                  ✨ <strong>心境映射：</strong>{ATTUNEMENT_MINDSET_MAP[activeAttunement.id] || CATEGORY_PSYCHOLOGY[category]?.summary || "静心观照当下心念状态"}
+                </div>
+              </div>
+
+              {/* Meaning Core Content */}
+              <div className="space-y-4 text-xs font-serif leading-normal text-left text-slate-700">
+                {/* Imprint Quote - Centered and italicized, more concise */}
+                <p className="text-[10.5px] text-amber-900/80 text-center italic tracking-wider py-1.5 border-t border-b border-dashed border-amber-800/10 my-1 select-none w-full font-serif font-medium leading-relaxed">
+                  “ {activeAttunement.intro.replace(/^此印是/, '').replace(/^此印代表/, '')} ”
+                </p>
+
+                {/* Classic separated formatting */}
+                <div className="space-y-4 select-none pt-1">
+                  {/* Term 1 */}
+                  <div className="space-y-1">
+                    <h4 className="font-serif font-bold text-amber-950 text-[12px] tracking-wide">
+                      {activeAttunement.term1.title}
+                    </h4>
+                    <p className="text-[10.5px] text-slate-600 leading-relaxed font-sans">
+                      {getSeekerFriendlyDesc(activeAttunement.id, 0, activeAttunement.term1.desc)}
+                    </p>
+                  </div>
+
+                  {/* Term 2 */}
+                  <div className="space-y-1">
+                    <h4 className="font-serif font-bold text-amber-950 text-[12px] tracking-wide">
+                      {activeAttunement.term2.title}
+                    </h4>
+                    <p className="text-[10.5px] text-slate-600 leading-relaxed font-sans">
+                      {getSeekerFriendlyDesc(activeAttunement.id, 1, activeAttunement.term2.desc)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Footer Action */}
+              <div className="pt-1 text-center">
+                <button
+                  onClick={() => setShowAttunementModal(false)}
+                  className="px-5 py-1.5 rounded-lg bg-amber-800 hover:bg-amber-900 text-amber-50 font-serif text-[10px] font-medium tracking-wider transition-all duration-200 cursor-pointer hover:scale-102 active:scale-98"
+                >
+                  合十感念
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
