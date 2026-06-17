@@ -44,7 +44,10 @@ export default function ParticleBackground({
 
     // Particle pool
     const particles: Particle[] = [];
-    const maxParticles = attuneActive ? 220 : 80;
+    const isMobile = window.innerWidth < 768;
+    const maxParticles = attuneActive 
+      ? (isMobile ? 100 : 220) 
+      : (isMobile ? 40 : 80);
 
     // Handle Resize
     const resizeObserver = new ResizeObserver((entries) => {
@@ -198,15 +201,17 @@ export default function ParticleBackground({
 
         // Draw particle
         ctx.beginPath();
-        // Glow effect
-        ctx.shadowBlur = p.size * 3.5;
-        ctx.shadowColor = p.color.includes('230') ? '#d4af37' : nonGoldGlowHex;
         ctx.fillStyle = `${p.color} ${p.alpha})`;
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
 
-        // Reset shadow
-        ctx.shadowBlur = 0;
+        // Draw soft outer halo glow on larger particles without slow canvas shadows
+        if (p.size > 1.2) {
+          ctx.beginPath();
+          ctx.fillStyle = p.color.includes('230') ? `rgba(212, 175, 55, ${p.alpha * 0.25})` : `${p.color.replace('rgba(', '').split(',')[0]}, ${p.color.replace('rgba(', '').split(',')[1]}, ${p.color.replace('rgba(', '').split(',')[2]}, ${p.alpha * 0.15})`;
+          ctx.arc(p.x, p.y, p.size * 2.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
         // Recreate dead or out-of-bounds particles
         if (

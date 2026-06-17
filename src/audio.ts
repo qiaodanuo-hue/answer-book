@@ -20,12 +20,27 @@ class EtherealSynth {
     return this.ctx;
   }
 
-  // Handle active browser audio context unlock
+  // Handle active browser audio context unlock with real silent tone triggering for iOS Safari
   unlock() {
     try {
       const ctx = this.initContext();
-      if (ctx && ctx.state === 'suspended') {
-        ctx.resume();
+      if (ctx) {
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+        
+        // Create an instant silent node to satisfy iOS's requirement for physical user interaction to play sound
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        gain.gain.setValueAtTime(0.00001, ctx.currentTime);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.05);
       }
     } catch (e) {
       console.warn('Silent audio unlock attempt failed:', e);
