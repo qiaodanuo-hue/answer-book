@@ -815,16 +815,116 @@ export default function App() {
   const BASELINE_LIMIT = 3;
   const attemptsLeft = Math.max(0, BASELINE_LIMIT + bonusReadings - usedToday);
 
+  const pendingShareBonus = useRef(false);
+  const bonusReadingsRef = useRef(0);
+
+  // Keep ref synchronized with state to avoid stale closures in event listeners
+  useEffect(() => {
+    bonusReadingsRef.current = bonusReadings;
+  }, [bonusReadings]);
+
   // Grant sharing bonus (up to 2 times per day)
-  const grantShareBonus = () => {
-    if (bonusReadings >= 2) {
-      showToast('✨ 今日增福已达上限：每日分享增加祈愿上限为两次，感谢您的虔诚分享！');
-      return;
+  const grantShareBonus = (): boolean => {
+    if (bonusReadingsRef.current >= 2) {
+      return false;
     }
-    const nextBonus = bonusReadings + 1;
+    const nextBonus = bonusReadingsRef.current + 1;
     setBonusReadings(nextBonus);
     localStorage.setItem('answers_book_daily_bonus', nextBonus.toString());
-    showToast(`✨ 随缘增福：善因结得善果，感念合十，已为您额外增添一次问卜机缘。(今日第 ${nextBonus}/2 次分享赠礼)`);
+    return true;
+  };
+
+  // Listen for returning to the app (switching back from WeChat, Xiaohongshu, etc.)
+  useEffect(() => {
+    const handleReturnToApp = () => {
+      if (pendingShareBonus.current) {
+        pendingShareBonus.current = false;
+        const granted = grantShareBonus();
+        if (granted) {
+          showToast('✨ 感谢分享！您已回到殿堂，已为您额外增添一次问卜福缘 🔮');
+        } else {
+          showToast('✨ 感谢您的虔念分享，今日祈愿福缘已满盈！');
+        }
+      }
+    };
+
+    // Listen to both standard visibilitychange and window focus events for max reliability
+    document.addEventListener('visibilitychange', handleReturnToApp);
+    window.addEventListener('focus', handleReturnToApp);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleReturnToApp);
+      window.removeEventListener('focus', handleReturnToApp);
+    };
+  }, []);
+
+  // Helper to share the generated image file natively if supported
+  const handleNativeShare = async (): Promise<boolean> => {
+    if (!generatedImage) return false;
+    try {
+      if (typeof navigator.share === 'undefined' || typeof navigator.canShare === 'undefined') {
+        return false;
+      }
+      const res = await fetch(generatedImage);
+      const blob = await res.blob();
+      const file = new File([blob], 'divination-sign.png', { type: 'image/png' });
+      
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: '答案之书 · 命运神签',
+          text: '我在此求得了一枚命运神签，快来看看你的解答吧！'
+        });
+        return true;
+      }
+    } catch (err) {
+      console.warn('Native share failed or canceled:', err);
+    }
+    return false;
+  };
+
+  // --- Mobile Long Press to Save Card to Album Helpers ---
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressActive = useRef(false);
+
+  const handleLongPressSave = () => {
+    const targetImg = generatedImg || generatedImage;
+    if (!targetImg) {
+      showToast('🔮 天机画卷仍凝聚中，请稍后再试长按保存~');
+      return;
+    }
+    
+    try {
+      const link = document.createElement('a');
+      link.href = targetImg;
+      link.download = `命运神签-${chosenAnswer?.hexagram || '答案之书'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast('📸 命运神签保存成功！已开始为您保存画卷，亦可长按卡片在弹出菜单中直接选择「保存图片」✨');
+    } catch (err) {
+      console.error('Download trigger failed:', err);
+      showToast('💡 提示：请继续长按卡片，在系统弹出菜单中选择「保存图片至相册」✨');
+    }
+  };
+
+  const startLongPress = (e: React.TouchEvent | React.MouseEvent) => {
+    isLongPressActive.current = false;
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressActive.current = true;
+      handleLongPressSave();
+    }, 600); // 600ms hold time
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
   };
 
   // Load history & daily limits from localStorage on mount
@@ -839,11 +939,11 @@ export default function App() {
     }
 
     // Force clear/reset to 0 used today for current design iteration session
-    const resetDone = localStorage.getItem('answers_book_reset_to_3_v4');
+    const resetDone = localStorage.getItem('answers_book_reset_to_3_v5');
     if (!resetDone) {
       localStorage.setItem('answers_book_daily_used', '0');
       localStorage.setItem('answers_book_daily_bonus', '0');
-      localStorage.setItem('answers_book_reset_to_3_v4', 'true');
+      localStorage.setItem('answers_book_reset_to_3_v5', 'true');
     }
 
     // Daily limit initialization configuration
@@ -1064,9 +1164,13 @@ export default function App() {
     const shareText = `【答案之书】\n🔮 占问之事：${question || '精诚所至，默默叩问'}\n📖 宿命解答：${chosenAnswer.text}\n✨ 命运启示：${chosenAnswer.interpretation}\n🎨 幸运色：${chosenAnswer.luckyColor} | 🔢 幸运数：${chosenAnswer.luckyNumber}\n🌟 乾坤卦象：${chosenAnswer.hexagram || '无'}`;
     navigator.clipboard.writeText(shareText).then(() => {
       setCopied(true);
-      showToast('🔮 精美命理签语已成功复制到剪贴板！');
+      const granted = grantShareBonus();
+      if (granted) {
+        showToast('🔮 精美命理签语已成功复制到剪贴板！(已为您额外增添一次问卜福缘 ✨)');
+      } else {
+        showToast('🔮 精美命理签语已成功复制到剪贴板！');
+      }
       setTimeout(() => setCopied(false), 2000);
-      grantShareBonus(); // Get bonus from copywriting share
     });
   };
 
@@ -1874,7 +1978,37 @@ export default function App() {
               className="w-full flex flex-col items-center"
             >
               {/* Double page ancient book layouts */}
-              <div id="destiny-book-card" className="w-full max-w-4xl parchment-paper text-slate-900 rounded-3xl overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),0_10px_30px_rgba(212,175,55,0.1)] border border-amber-500/20 flex flex-col md:flex-row relative">
+              <div 
+                id="destiny-book-card" 
+                className="w-full max-w-4xl parchment-paper text-slate-900 rounded-3xl overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),0_10px_30px_rgba(212,175,55,0.1)] border border-amber-500/20 flex flex-col md:flex-row relative"
+                onTouchStart={startLongPress}
+                onTouchEnd={cancelLongPress}
+                onTouchCancel={cancelLongPress}
+                onTouchMove={cancelLongPress}
+                onMouseDown={startLongPress}
+                onMouseUp={cancelLongPress}
+                onMouseLeave={cancelLongPress}
+                style={{
+                  '--color-slate-900': '#0f172a',
+                  '--color-slate-800': '#1e293b',
+                  '--color-slate-700': '#334155',
+                  '--color-slate-600': '#475569',
+                  '--color-slate-500': '#64748b',
+                  '--color-stone-900': '#1c1917',
+                  '--color-stone-800': '#292524',
+                  '--color-stone-700': '#44403c',
+                  '--color-stone-500': '#78716c',
+                  '--color-stone-300': '#d6d3d1',
+                  '--color-amber-950': '#451a03',
+                  '--color-amber-900': '#78350f',
+                  '--color-amber-800': '#92400e',
+                  '--color-amber-700': '#b45309',
+                  '--color-amber-600': '#d97706',
+                  '--color-amber-500': '#f59e0b',
+                  '--color-amber-400': '#fbbf24',
+                  '--color-amber-300': '#fcd34d',
+                } as React.CSSProperties}
+              >
                 {/* Spine crease strip */}
                 <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-8 -ml-4 bg-gradient-to-r from-black/0 via-black/15 to-black/0 pointer-events-none z-10 border-x border-black/5" />
 
@@ -1943,6 +2077,13 @@ export default function App() {
                       alt="长按保存命运神签"
                       className="absolute inset-0 w-full h-full opacity-0 pointer-events-auto z-20 cursor-default select-none"
                       style={{ WebkitTouchCallout: 'default' }}
+                      onTouchStart={startLongPress}
+                      onTouchEnd={cancelLongPress}
+                      onTouchCancel={cancelLongPress}
+                      onTouchMove={cancelLongPress}
+                      onMouseDown={startLongPress}
+                      onMouseUp={cancelLongPress}
+                      onMouseLeave={cancelLongPress}
                     />
                   )}
                   {/* Classical exquisite double border frame */}
@@ -2072,7 +2213,7 @@ export default function App() {
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 {attemptsLeft <= 0 ? (
                   bonusReadings < 2 ? (
-                    <span className="text-center whitespace-nowrap">今日天机已竭，「分享命运神签」重获卜问福缘 (今日已赠: +{bonusReadings}/2次)</span>
+                    <span className="text-center whitespace-nowrap">今日天机已竭，「分享神签」重获卜问福缘 (今日已赠: +{bonusReadings}/2次)</span>
                   ) : (
                     <span className="text-amber-300/90 font-medium text-center whitespace-nowrap">今日问卜已达上限，天机暂避。收藏本页链接，明天准时续缘~</span>
                   )
@@ -2080,7 +2221,7 @@ export default function App() {
                   <span className="whitespace-nowrap">
                     今日占问 {usedToday} 次，天机余量 <span className="font-sans font-semibold text-amber-300">{attemptsLeft}</span>/{BASELINE_LIMIT + bonusReadings} 次
                     {bonusReadings < 2 ? (
-                      <span className="text-amber-400/90 ml-1.5 font-sans font-normal">(分享本页可增次数)</span>
+                      <span className="text-amber-400/90 ml-1.5 font-sans font-normal">(分享神签增加祈愿福缘)</span>
                     ) : (
                       <span className="text-emerald-400 ml-1 font-sans font-medium">(已获赠福缘)</span>
                     )}
@@ -2109,7 +2250,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#070505]/92 backdrop-blur-lg p-4 overflow-y-auto"
             onClick={() => setIsShareModalOpen(false)}
           >
             <motion.div
@@ -2117,9 +2258,26 @@ export default function App() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-stone-950/95 border border-amber-500/20 rounded-3xl w-full max-w-xl shadow-[0_0_50px_rgba(212,175,55,0.15)] flex flex-col p-4 sm:p-5 space-y-4 relative max-h-[96vh] scrollbar-none"
+              className="bg-gradient-to-b from-[#1f1917] via-[#130f0e] to-[#0c0909] border border-amber-500/30 rounded-3xl w-full max-w-xl shadow-[0_20px_50px_rgba(0,0,0,0.8),_0_0_40px_rgba(217,119,6,0.12)] flex flex-col p-4 sm:p-5 space-y-4 relative overflow-hidden max-h-[96vh] scrollbar-none"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Exquisite Celestial Ambient Nebulae */}
+              <div 
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] rounded-full blur-[90px] opacity-20 pointer-events-none transition-all duration-1000"
+                style={{
+                  backgroundColor: 
+                    category === 'general' ? '#6366f1' :
+                    category === 'love' ? '#f43f5e' :
+                    category === 'career' ? '#10b981' :
+                    '#f59e0b'
+                }}
+              />
+              
+              {/* Elegant Traditional Corner Accents */}
+              <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-amber-500/30 rounded-tl" />
+              <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-amber-500/30 rounded-tr" />
+              <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-amber-500/30 rounded-bl" />
+              <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-amber-500/30 rounded-br" />
               {/* Header Title with Gilded Line */}
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <div className="flex items-center space-x-2.5">
@@ -2166,6 +2324,13 @@ export default function App() {
                         alt="命运印记"
                         className="relative max-w-full max-h-[58vh] sm:max-h-[62vh] rounded-xl object-contain border border-amber-500/20 shadow-2xl transition-all duration-300 hover:scale-[1.01] cursor-pointer"
                         title="💡 手机端：可在此图片上长按保存到相册；电脑端：可右键另存为图片"
+                        onTouchStart={startLongPress}
+                        onTouchEnd={cancelLongPress}
+                        onTouchCancel={cancelLongPress}
+                        onTouchMove={cancelLongPress}
+                        onMouseDown={startLongPress}
+                        onMouseUp={cancelLongPress}
+                        onMouseLeave={cancelLongPress}
                       />
                     </div>
                     
@@ -2197,8 +2362,12 @@ export default function App() {
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(window.location.href).then(() => {
-                          showToast('✨ 占问链接复制成功！快分享给有缘人吧~');
-                          grantShareBonus();
+                          const granted = grantShareBonus();
+                          if (granted) {
+                            showToast('✨ 占问链接复制成功！已为您额外增添一次问卜福缘~');
+                          } else {
+                            showToast('✨ 占问链接复制成功！快分享给有缘人吧~');
+                          }
                         }).catch(() => {
                           showToast('❌ 复制失败，请从浏览器地址栏手动复制。');
                         });
@@ -2213,9 +2382,14 @@ export default function App() {
                   {/* WeChat Friend */}
                   <div className="flex flex-col items-center gap-1.5">
                     <button
-                      onClick={() => {
-                        showToast('💡 微信分享提示：已为您绘制精美神签！请长按上方卡片保存至相册，再前往微信选择发送给好友~');
-                        grantShareBonus();
+                      onClick={async () => {
+                        const shared = await handleNativeShare();
+                        pendingShareBonus.current = true;
+                        if (shared) {
+                          showToast('✨ 正在唤起微信分享... 分享并返回即可获得增福福缘 🔮');
+                        } else {
+                          showToast('💡 微信分享：请长按上方卡片保存至相册发送，返回后即可获得增福福缘 ✨');
+                        }
                       }}
                       className="w-11 h-11 rounded-full flex items-center justify-center bg-[#07C160]/10 border border-[#07C160]/20 hover:bg-[#07C160] hover:text-white text-[#07C160] transition-all duration-200 shadow-md hover:scale-110 active:scale-95 cursor-pointer"
                     >
@@ -2229,9 +2403,14 @@ export default function App() {
                   {/* Moments */}
                   <div className="flex flex-col items-center gap-1.5">
                     <button
-                      onClick={() => {
-                        showToast('💡 朋友圈分享提示：请长按上方绘制生成的命运图保存，再前往微信朋友圈手动发布分享~');
-                        grantShareBonus();
+                      onClick={async () => {
+                        const shared = await handleNativeShare();
+                        pendingShareBonus.current = true;
+                        if (shared) {
+                          showToast('✨ 正在唤起朋友圈分享... 分享并返回即可获得增福福缘 🔮');
+                        } else {
+                          showToast('💡 朋友圈分享：请长按上方卡片保存至相册并在朋友圈发布，返回后即可获得增福福缘 ✨');
+                        }
                       }}
                       className="w-11 h-11 rounded-full flex items-center justify-center bg-[#07D160]/10 border border-[#07D160]/20 hover:bg-[#07D160] hover:text-white text-[#07D160] transition-all duration-200 shadow-md hover:scale-110 active:scale-95 cursor-pointer"
                     >
@@ -2245,9 +2424,14 @@ export default function App() {
                   {/* Xiaohongshu */}
                   <div className="flex flex-col items-center gap-1.5">
                     <button
-                      onClick={() => {
-                        showToast('💡 小红书分享提示：请长按上方神签图保存，再打开小红书发布精美占考成果。可添加 #答案之书 #今日占卜 标签~');
-                        grantShareBonus();
+                      onClick={async () => {
+                        const shared = await handleNativeShare();
+                        pendingShareBonus.current = true;
+                        if (shared) {
+                          showToast('✨ 正在唤起系统分享... 分享并返回即可获得增福福缘 🔮');
+                        } else {
+                          showToast('💡 小红书分享：请长按上方卡片保存至相册，打开小红书带话题 #今日占卜 笔记发布，返回后即可获得增福福缘 ✨');
+                        }
                       }}
                       className="w-11 h-11 rounded-full flex items-center justify-center bg-[#FF2442]/10 border border-[#FF2442]/20 hover:bg-[#FF2442] hover:text-white text-[#FF2442] transition-all duration-200 shadow-md hover:scale-110 active:scale-95 cursor-pointer"
                     >
