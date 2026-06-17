@@ -883,49 +883,7 @@ export default function App() {
     return false;
   };
 
-  // --- Mobile Long Press to Save Card to Album Helpers ---
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isLongPressActive = useRef(false);
 
-  const handleLongPressSave = () => {
-    const targetImg = generatedImg || generatedImage;
-    if (!targetImg) {
-      showToast('🔮 天机画卷仍凝聚中，请稍后再试长按保存~');
-      return;
-    }
-    
-    try {
-      const link = document.createElement('a');
-      link.href = targetImg;
-      link.download = `命运神签-${chosenAnswer?.hexagram || '答案之书'}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      showToast('📸 命运神签保存成功！已开始为您保存画卷，亦可长按卡片在弹出菜单中直接选择「保存图片」✨');
-    } catch (err) {
-      console.error('Download trigger failed:', err);
-      showToast('💡 提示：请继续长按卡片，在系统弹出菜单中选择「保存图片至相册」✨');
-    }
-  };
-
-  const startLongPress = (e: React.TouchEvent | React.MouseEvent) => {
-    isLongPressActive.current = false;
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-    }
-    longPressTimerRef.current = setTimeout(() => {
-      isLongPressActive.current = true;
-      handleLongPressSave();
-    }, 600); // 600ms hold time
-  };
-
-  const cancelLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
 
   // Load history & daily limits from localStorage on mount
   useEffect(() => {
@@ -1981,13 +1939,6 @@ export default function App() {
               <div 
                 id="destiny-book-card" 
                 className="w-full max-w-4xl parchment-paper text-slate-900 rounded-3xl overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),0_10px_30px_rgba(212,175,55,0.1)] border border-amber-500/20 flex flex-col md:flex-row relative"
-                onTouchStart={startLongPress}
-                onTouchEnd={cancelLongPress}
-                onTouchCancel={cancelLongPress}
-                onTouchMove={cancelLongPress}
-                onMouseDown={startLongPress}
-                onMouseUp={cancelLongPress}
-                onMouseLeave={cancelLongPress}
                 style={{
                   '--color-slate-900': '#0f172a',
                   '--color-slate-800': '#1e293b',
@@ -2009,6 +1960,15 @@ export default function App() {
                   '--color-amber-300': '#fcd34d',
                 } as React.CSSProperties}
               >
+                {/* Full-card invisible overlay for direct native browser/WeChat long-press saving */}
+                {generatedImg && (
+                  <img
+                    src={generatedImg}
+                    alt="长按保存命运神签"
+                    className="absolute inset-0 w-full h-full opacity-0 pointer-events-auto z-30 cursor-default"
+                    style={{ WebkitTouchCallout: 'default' }}
+                  />
+                )}
                 {/* Spine crease strip */}
                 <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-8 -ml-4 bg-gradient-to-r from-black/0 via-black/15 to-black/0 pointer-events-none z-10 border-x border-black/5" />
 
@@ -2070,22 +2030,6 @@ export default function App() {
 
                 {/* Right Page: The core answering reveal */}
                 <div className="flex-1 p-6 sm:p-9 md:p-12 flex flex-col justify-between min-h-[340px] relative">
-                  {/* Overlay image for native browser/WeChat long-press saving */}
-                  {generatedImg && (
-                    <img
-                      src={generatedImg}
-                      alt="长按保存命运神签"
-                      className="absolute inset-0 w-full h-full opacity-0 pointer-events-auto z-20 cursor-default select-none"
-                      style={{ WebkitTouchCallout: 'default' }}
-                      onTouchStart={startLongPress}
-                      onTouchEnd={cancelLongPress}
-                      onTouchCancel={cancelLongPress}
-                      onTouchMove={cancelLongPress}
-                      onMouseDown={startLongPress}
-                      onMouseUp={cancelLongPress}
-                      onMouseLeave={cancelLongPress}
-                    />
-                  )}
                   {/* Classical exquisite double border frame */}
                   <div className="absolute inset-2 border-2 border-amber-800/10 pointer-events-none rounded-xl" />
                   <div className="absolute inset-3 border border-dashed border-amber-800/15 pointer-events-none rounded-lg" />
@@ -2323,14 +2267,7 @@ export default function App() {
                         src={generatedImage}
                         alt="命运印记"
                         className="relative max-w-full max-h-[58vh] sm:max-h-[62vh] rounded-xl object-contain border border-amber-500/20 shadow-2xl transition-all duration-300 hover:scale-[1.01] cursor-pointer"
-                        title="💡 手机端：可在此图片上长按保存到相册；电脑端：可右键另存为图片"
-                        onTouchStart={startLongPress}
-                        onTouchEnd={cancelLongPress}
-                        onTouchCancel={cancelLongPress}
-                        onTouchMove={cancelLongPress}
-                        onMouseDown={startLongPress}
-                        onMouseUp={cancelLongPress}
-                        onMouseLeave={cancelLongPress}
+                        title="💡 手机端：在此图片上「长按」即可保存至相册；电脑端：可右键另存为图片"
                       />
                     </div>
                     
@@ -2386,9 +2323,9 @@ export default function App() {
                         const shared = await handleNativeShare();
                         pendingShareBonus.current = true;
                         if (shared) {
-                          showToast('✨ 正在唤起微信分享... 分享并返回即可获得增福福缘 🔮');
+                          showToast('✨ 已拉起系统分享！在弹出菜单中直接点击首行的「微信好友/近照头像」或「微信」，即可直达好友聊天页并发送神签哦！也可往下选「保存图像」到相册 ✨');
                         } else {
-                          showToast('💡 微信分享：请长按上方卡片保存至相册发送，返回后即可获得增福福缘 ✨');
+                          showToast('💡 微信分享提示：由于各别浏览器环境限制，请您「长按」上方卡片图在弹出中选择「保存图片」，随后打开微信发送给好友，返回后同样可额外获得福缘哦 ✨');
                         }
                       }}
                       className="w-11 h-11 rounded-full flex items-center justify-center bg-[#07C160]/10 border border-[#07C160]/20 hover:bg-[#07C160] hover:text-white text-[#07C160] transition-all duration-200 shadow-md hover:scale-110 active:scale-95 cursor-pointer"
@@ -2399,7 +2336,7 @@ export default function App() {
                     </button>
                     <span className="text-[9px] sm:text-[10px] font-serif text-stone-400">微信好友</span>
                   </div>
-
+ 
                   {/* Moments */}
                   <div className="flex flex-col items-center gap-1.5">
                     <button
@@ -2407,9 +2344,9 @@ export default function App() {
                         const shared = await handleNativeShare();
                         pendingShareBonus.current = true;
                         if (shared) {
-                          showToast('✨ 正在唤起朋友圈分享... 分享并返回即可获得增福福缘 🔮');
+                          showToast('✨ 已拉起系统分享！在弹出菜单中直接点击「朋友圈」，即可快速配图极速发布朋友圈哦；或直接往下选择「保存图像」到相册 ✨');
                         } else {
-                          showToast('💡 朋友圈分享：请长按上方卡片保存至相册并在朋友圈发布，返回后即可获得增福福缘 ✨');
+                          showToast('💡 朋友圈分享提示：由于各别浏览器限制，请「长按」上方卡片图在弹窗中选择「保存图片至相册」，随后在朋友圈发布分享，返回后同样可获得增福福缘 ✨');
                         }
                       }}
                       className="w-11 h-11 rounded-full flex items-center justify-center bg-[#07D160]/10 border border-[#07D160]/20 hover:bg-[#07D160] hover:text-white text-[#07D160] transition-all duration-200 shadow-md hover:scale-110 active:scale-95 cursor-pointer"
@@ -2420,7 +2357,7 @@ export default function App() {
                     </button>
                     <span className="text-[9px] sm:text-[10px] font-serif text-stone-400">朋友圈</span>
                   </div>
-
+ 
                   {/* Xiaohongshu */}
                   <div className="flex flex-col items-center gap-1.5">
                     <button
@@ -2428,9 +2365,9 @@ export default function App() {
                         const shared = await handleNativeShare();
                         pendingShareBonus.current = true;
                         if (shared) {
-                          showToast('✨ 正在唤起系统分享... 分享并返回即可获得增福福缘 🔮');
+                          showToast('✨ 已拉起系统分享！在弹出菜单中，直接点击「小红书」图标，即可一键将神签图片塞入小红书发布页！或直接往下选择「保存图像」到相册 ✨');
                         } else {
-                          showToast('💡 小红书分享：请长按上方卡片保存至相册，打开小红书带话题 #今日占卜 笔记发布，返回后即可获得增福福缘 ✨');
+                          showToast('💡 小红书分享提示：请「长按」上方卡片选择「保存图片」，随后打开小红书带话题 #今日占卜 笔记发布，返回后同样可获得增福福缘 ✨');
                         }
                       }}
                       className="w-11 h-11 rounded-full flex items-center justify-center bg-[#FF2442]/10 border border-[#FF2442]/20 hover:bg-[#FF2442] hover:text-white text-[#FF2442] transition-all duration-200 shadow-md hover:scale-110 active:scale-95 cursor-pointer"
