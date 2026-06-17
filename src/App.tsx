@@ -28,7 +28,6 @@ import { ANSWERS, CATEGORIES, CategoryId, Answer } from './data';
 import { synth } from './audio';
 import ParticleBackground from './components/ParticleBackground';
 import HistoryLog, { HistoryRecord } from './components/HistoryLog';
-import html2canvas from 'html2canvas';
 
 // Helper to map traditional Chinese color names of the Answer Book to beautiful CSS Hex colors
 export function getLuckyColorHex(color: string): string {
@@ -775,6 +774,22 @@ export default function App() {
   const [generatedImg, setGeneratedImg] = useState<string | null>(null);
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
 
+  // Global interaction event listener to silently resume the AudioContext on mobile
+  useEffect(() => {
+    const unlockAudio = () => {
+      synth.unlock();
+      // Safe cleanup as soon as first touch or click activates context
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+    window.addEventListener('click', unlockAudio, { passive: true });
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
+
   // Auto-generate high-res card image when user gets a revelation
   useEffect(() => {
     if (appState === 'reveal' && chosenAnswer) {
@@ -782,23 +797,28 @@ export default function App() {
       
       // Wait for the text animation to fully complete (approx 20 chars * 0.08 = 1.6s)
       const delayMs = Math.max(1200, Math.min(2200, chosenAnswer.text.length * 80 + 200));
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         const element = document.getElementById('destiny-book-card');
         if (element) {
           setIsGeneratingImg(true);
-          html2canvas(element, {
-            useCORS: true,
-            scale: 2, // 2x high-resolution crispness for long-press saving
-            backgroundColor: '#fbf8eb', // parchment background tone
-            logging: false,
-          }).then((canvas) => {
+          try {
+            // Lazy load html2canvas to optimize first-screen loading speed tremendously!
+            const html2canvasModule = await import('html2canvas');
+            const h2c = html2canvasModule.default;
+            
+            const canvas = await h2c(element, {
+              useCORS: true,
+              scale: 2, // 2x high-resolution crispness for long-press saving
+              backgroundColor: '#fbf8eb', // parchment background tone
+              logging: false,
+            });
             const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
             setGeneratedImg(dataUrl);
             setIsGeneratingImg(false);
-          }).catch((err) => {
-            console.error('Html2canvas error:', err);
+          } catch (err) {
+            console.error('Lazy-loaded html2canvas error:', err);
             setIsGeneratingImg(false);
-          });
+          }
         }
       }, delayMs);
 
@@ -931,7 +951,9 @@ export default function App() {
   const attuneTimerRef = useRef<number | null>(null);
   
   const handleAttuneStart = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
+    // Prevent double firing on hybrid devices
+    if (e.type === 'mousedown' && 'ontouchstart' in window) return;
+    
     if (appState !== 'cover') return;
 
     if (attemptsLeft <= 0) {
@@ -1965,8 +1987,8 @@ export default function App() {
                   <img
                     src={generatedImg}
                     alt="长按保存命运神签"
-                    className="absolute inset-0 w-full h-full opacity-0 pointer-events-auto z-30 cursor-default"
-                    style={{ WebkitTouchCallout: 'default' }}
+                    className="absolute inset-0 w-full h-full opacity-0 pointer-events-auto z-30 cursor-default select-auto"
+                    style={{ WebkitTouchCallout: 'default', WebkitUserSelect: 'auto', userSelect: 'auto' }}
                   />
                 )}
                 {/* Spine crease strip */}
@@ -2266,8 +2288,9 @@ export default function App() {
                         referrerPolicy="no-referrer"
                         src={generatedImage}
                         alt="命运印记"
-                        className="relative max-w-full max-h-[58vh] sm:max-h-[62vh] rounded-xl object-contain border border-amber-500/20 shadow-2xl transition-all duration-300 hover:scale-[1.01] cursor-pointer"
+                        className="relative max-w-full max-h-[58vh] sm:max-h-[62vh] rounded-xl object-contain border border-amber-500/20 shadow-2xl transition-all duration-300 hover:scale-[1.01] cursor-pointer select-auto"
                         title="💡 手机端：在此图片上「长按」即可保存至相册；电脑端：可右键另存为图片"
+                        style={{ WebkitTouchCallout: 'default', WebkitUserSelect: 'auto', userSelect: 'auto' }}
                       />
                     </div>
                     

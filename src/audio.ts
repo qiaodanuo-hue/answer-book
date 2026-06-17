@@ -15,9 +15,21 @@ class EtherealSynth {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch((err) => console.log('AudioContext resume deferred:', err));
     }
     return this.ctx;
+  }
+
+  // Handle active browser audio context unlock
+  unlock() {
+    try {
+      const ctx = this.initContext();
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume();
+      }
+    } catch (e) {
+      console.warn('Silent audio unlock attempt failed:', e);
+    }
   }
 
   // Ethereal single chime (bell vibe)
